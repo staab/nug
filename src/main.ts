@@ -135,14 +135,13 @@ export class Store<T> {
 
 // Component
 
-export class Component<P extends Record<string, any>> {
+export type ComponentProps = Record<string, any>
+
+export class Component<P extends ComponentProps> {
   protected element: Element | undefined
   protected subs: Unsubscriber[] = []
-  protected state: Record<string, Store<any>>
 
-  constructor(protected props: P) {
-    this.state = this.getInitialState()
-  }
+  constructor(protected props: P) {}
 
   mount(element: Element) {
     this.element = element
@@ -153,15 +152,7 @@ export class Component<P extends Record<string, any>> {
       }
     }
 
-    for (const v of Object.values(this.state)) {
-      this.subs.push(v.subscribe(this.update, {initial: false}))
-    }
-
     this.update()
-  }
-
-  getInitialState() {
-    return {}
   }
 
   destroy() {
@@ -192,3 +183,26 @@ export class Component<P extends Record<string, any>> {
     return []
   }
 }
+
+// Application
+
+export type MountState = Record<string, Store<any>>
+
+export const mount = <P extends ComponentProps, S extends MountState>(element: Element, component: Component<P>, state: S) => {
+  const subs: Unsubscriber[] = []
+
+  for (const v of Object.values(state)) {
+    if (v instanceof Store) {
+      subs.push(v.subscribe(component.update, {initial: false}))
+    }
+  }
+
+  component.mount(element)
+
+  return () => {
+    for (const cb of subs) {
+      cb()
+    }
+  }
+}
+

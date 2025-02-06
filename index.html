@@ -10,27 +10,27 @@
     <div id="app"></div>
     <script type="module" src="/src/main.ts"></script>
     <script type="module">
-      import {Component, div, button, span, text, Store} from '/src/main.ts'
+      import {Component, div, button, span, text, Store, mount} from '/src/main.ts'
+
+      const count = new Store(0)
+
+      const incrementCount = () => count.update(c => c + 1)
 
       class Counter extends Component {
-        getInitialState() {
-          return {
-            count: new Store(0)
-          }
-        }
-
-        onClick = () => {
-          this.state.count.update(c => c + 1)
-        }
+        onClick = () => incrementCount()
 
         render() {
           return div()
             .append(button({onclick: this.onClick}).append(text(this.props.buttonText)))
-            .append(span({style: 'color: red; padding-left: 12px;'}).append(text(this.state.count.get())))
+            .append(span({style: 'color: red; padding-left: 12px;'}).append(text(count.get())))
         }
       }
 
-      new Counter({buttonText: "Click me!"}).mount(document.querySelector('#app'))
+      const app = document.querySelector('#app')
+      const root = new Counter({buttonText: "Click me!"})
+      const state = {count}
+
+      mount(app, root, state)
     </script>
   </body>
 </html>

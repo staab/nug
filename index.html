@@ -4,10 +4,33 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vite + TS</title>
+    <title>Charity example app</title>
   </head>
   <body>
     <div id="app"></div>
     <script type="module" src="/src/main.ts"></script>
+    <script type="module">
+      import {Component, div, button, span, text, Store} from '/src/main.ts'
+
+      class Counter extends Component {
+        getInitialState() {
+          return {
+            count: new Store(0)
+          }
+        }
+
+        onClick = () => {
+          this.state.count.update(c => c + 1)
+        }
+
+        render() {
+          return div()
+            .append(button({onclick: this.onClick}).append(text(this.props.buttonText)))
+            .append(span({style: 'color: red; padding-left: 12px;'}).append(text(this.state.count.get())))
+        }
+      }
+
+      new Counter({buttonText: "Click me!"}).mount(document.querySelector('#app'))
+    </script>
   </body>
 </html>

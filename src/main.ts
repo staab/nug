@@ -2,22 +2,68 @@
 
 export const ensurePlural = <T>(x: T | T[]) => (x instanceof Array ? x : [x])
 
-// Nug
+// Stores
 
-export type NugAttrs = Record<string, any>
+export type Subscriber<T> = (value: T) => void
+
+export type Updater<T> = (value: T) => T
+
+export type Unsubscriber = () => void
+
+export type SubscribeOptions = {
+  initial?: boolean
+}
+
+export class Store<T> {
+  private subs: Subscriber<T>[] = []
+
+  constructor(private value: T) {}
+
+  get() {
+    return this.value
+  }
+
+  set(value: T) {
+    this.value = value
+
+    for (const cb of this.subs) {
+      cb(this.value)
+    }
+  }
+
+  update(cb: Updater<T>) {
+    this.set(cb(this.value))
+  }
+
+  subscribe(cb: Subscriber<T>, {initial = true}: SubscribeOptions = {}) {
+    this.subs.push(cb)
+
+    if (initial) {
+      cb(this.value)
+    }
+
+    return () => {
+      this.subs = this.subs.filter(s => s !== cb)
+    }
+  }
+}
+
+// Nug
 
 export interface Nug {
   render(element: Element): Element[]
   destroy(): void
 }
 
+export type NugElementAttrs = Record<string, any>
+
 export class NugElement implements Nug {
   children: Nug[] = []
 
-  constructor(readonly tag: string, readonly attrs: NugAttrs) {}
+  constructor(readonly tag: string, readonly attrs: NugElementAttrs) {}
 
   static define(tag: string) {
-    return (attrs: NugAttrs = {}) => new NugElement(tag, attrs)
+    return (attrs: NugElementAttrs = {}) => new NugElement(tag, attrs)
   }
 
   append(child: Nug) {
@@ -81,93 +127,42 @@ export class NugUnsafe implements Nug {
   destroy() {}
 }
 
-export class NugComponent implements Nug {
-  constructor(private component: Component) {}
-
-  render(element: Element) {
-    return this.component.mount(element)
-  }
-
-  destroy() {
-    this.component.destroy()
-  }
+export type ComponentOptions<P extends ComponentProps> = {
+  render: (props: P) => Nug[]
+  watch?: Store<any>[]
 }
-
-export const div = NugElement.define('div')
-
-export const span = NugElement.define('span')
-
-export const button = NugElement.define('button')
-
-export const text = (t: any) => new NugText(t.toString())
-
-export const unsafe = (t: any) => new NugUnsafe(t.toString())
-
-export const component = (component: Component) => new NugComponent(component)
-
-export const render = (element: Element, nugs: Nug[]) => nugs.flatMap(nug => nug.render(element))
-
-// Stores
-
-export type Subscriber<T> = (value: T) => void
-
-export type Updater<T> = (value: T) => T
-
-export type Unsubscriber = () => void
-
-export type SubscribeOptions = {
-  initial?: boolean
-}
-
-export class Store<T> {
-  private subs: Subscriber<T>[] = []
-
-  constructor(private value: T) {}
-
-  get() {
-    return this.value
-  }
-
-  set(value: T) {
-    this.value = value
-
-    for (const cb of this.subs) {
-      cb(this.value)
-    }
-  }
-
-  update(cb: Updater<T>) {
-    this.set(cb(this.value))
-  }
-
-  subscribe(cb: Subscriber<T>, {initial = true}: SubscribeOptions = {}) {
-    this.subs.push(cb)
-
-    if (initial) {
-      cb(this.value)
-    }
-
-    return () => {
-      this.subs = this.subs.filter(s => s !== cb)
-    }
-  }
-}
-
-// Component
 
 export type ComponentProps = Record<string, any>
 
-export class Component<P extends ComponentProps = ComponentProps> {
-  protected element: Element | undefined
+export class NugComponent<P extends ComponentProps> implements Nug {
   protected subs: Unsubscriber[] = []
-  protected nugs: Nug[] = []
+  protected container: Element | undefined
   protected elements: Element[] = []
-  declare protected watch: Store<any>[] | undefined
+  protected nugs: Nug[] = []
 
-  constructor(protected props: P) {}
+  constructor(private options: ComponentOptions<P>, private props: P) {}
 
-  mount(element: Element) {
-    this.element = element
+  static define<P extends ComponentProps>(options: ComponentOptions<P>) {
+    return (props: P) => new NugComponent(options, props)
+  }
+
+  private update = () => {
+    this.nugs.splice(0).forEach(nug => nug.destroy())
+    this.elements.splice(0).forEach(element => element.remove())
+
+    for (const nug of ensurePlural(this.options.render(this.props))) {
+      this.nugs.push(nug)
+
+      for (const element of nug.render(this.container!)) {
+        this.elements.push(element)
+      }
+    }
+
+    return this.elements
+  }
+
+  render(element: Element) {
+    this.container = element
 
     for (const v of Object.values(this.props)) {
       if (v instanceof Store) {
@@ -175,30 +170,11 @@ export class Component<P extends ComponentProps = ComponentProps> {
       }
     }
 
-    for (const v of this.watch || []) {
+    for (const v of this.options.watch || []) {
       this.subs.push(v.subscribe(this.update, {initial: false}))
     }
 
     return this.update()
-  }
-
-  update = () => {
-    if (!this.element) {
-      throw new Error(`${this.constructor.name} updated before it was mounted`)
-    }
-
-    for (const nug of this.nugs) {
-      nug.destroy()
-    }
-
-    for (const element of this.elements) {
-      element.remove()
-    }
-
-    this.nugs = ensurePlural(this.render())
-    this.elements = render(this.element, this.nugs)
-
-    return this.elements
   }
 
   destroy() {
@@ -214,8 +190,17 @@ export class Component<P extends ComponentProps = ComponentProps> {
       cb()
     }
   }
-
-  render(): Nug[] {
-    return []
-  }
 }
+
+export const div = NugElement.define('div')
+
+export const span = NugElement.define('span')
+
+export const button = NugElement.define('button')
+
+export const text = (t: any) => new NugText(t.toString())
+
+export const unsafe = (t: any) => new NugUnsafe(t.toString())
+
+export const component = <P extends ComponentProps>(options: ComponentOptions<P>) =>
+  NugComponent.define(options)

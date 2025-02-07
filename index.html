@@ -10,29 +10,27 @@
     <div id="app"></div>
     <script type="module" src="/src/main.ts"></script>
     <script type="module">
-      import {Component, div, button, span, text, Store, component} from '/src/main.ts'
+      import {div, button, span, text, Store, component} from '/src/main.ts'
 
       const count = new Store(0)
 
       const incrementCount = () => count.update(c => c + 1)
 
-      class CounterButton extends Component {
-        render() {
-          return button({onclick: incrementCount}).append(text(this.props.buttonText))
-        }
-      }
+      const CounterButton = component({
+        render({buttonText}) {
+          return button({onclick: incrementCount}).append(text(buttonText))
+        },
+      })
 
-      class CounterDisplay extends Component {
-        watch = [count]
-
+      const CounterDisplay = component({
+        watch: [count],
         render() {
           return span({style: 'color: red; padding-left: 12px;'}).append(text(count.get()))
-        }
-      }
+        },
+      })
 
-      class CounterItems extends Component {
-        watch = [count]
-
+      const CounterItems = component({
+        watch: [count],
         render() {
           const nugs = []
 
@@ -41,26 +39,26 @@
           }
 
           return nugs
-        }
-      }
+        },
+      })
 
-      class Counter extends Component {
-        render() {
+      const Counter = component({
+        render({buttonText}) {
           return [
-            component(new CounterButton({buttonText: this.props.buttonText})),
-            component(new CounterDisplay({})),
-            component(new CounterItems({})),
+            CounterButton({buttonText}),
+            CounterDisplay({}),
+            CounterItems({}),
           ]
-        }
-      }
+        },
+      })
 
-      class Application extends Component {
+      const Application = component({
         render() {
-          return component(new Counter({buttonText: "Click me!"}))
-        }
-      }
+          return Counter({buttonText: "Click me!"})
+        },
+      })
 
-      new Application({}).mount(document.querySelector('#app'))
+      Application({}).render(document.querySelector('#app'))
     </script>
   </body>
 </html>

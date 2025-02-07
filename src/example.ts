@@ -1,4 +1,4 @@
-import {div, button, span, anchor, text, writable, derived, deriveChunks, component, ChunkedList} from './index.ts'
+import {div, button, span, anchor, text, writable, derived, deriveChunks, NugComponent, ChunkedList} from './index.ts'
 
 const count = writable(0)
 
@@ -6,6 +6,7 @@ const items = derived([count], ([$count]) => {
   const $items = []
 
   for (let i = 0; i < $count; i++) {
+
     $items.push(i)
   }
 
@@ -24,19 +25,20 @@ type CounterButtonProps = {
   buttonText: string
 }
 
-const CounterButton = component<CounterButtonProps>({
+class CounterButton extends NugComponent<CounterButtonProps> {
   render({buttonText}) {
     return [
       button({click: incrementCount, class: 'btn btn-primary'})
         .append(text(buttonText))
     ]
-  },
-})
+  }
+}
 
-const CounterDisplay = component({
+class CounterDisplay extends NugComponent {
   addProps(props) {
     return {...props, count}
-  },
+  }
+
   render({count}) {
     const word = count === 1 ? 'time' : 'times'
 
@@ -44,48 +46,48 @@ const CounterDisplay = component({
       span({class: 'text-center inline-block opacity-50'})
         .append(text(`You have clicked ${count} ${word}`)),
     ]
-  },
-})
+  }
+}
 
 type CounterItemProps = {
   item: number
 }
 
-const CounterItem = component<CounterItemProps>({
+class CounterItem extends NugComponent<CounterItemProps> {
   render({item}) {
     return [div().append(text(`Item #${item}`))]
-  },
-})
+  }
+}
 
 type CounterProps = {
   buttonText: string
 }
 
-const Counter = component<CounterProps>({
+class Counter extends NugComponent<CounterProps> {
   render({buttonText}) {
     return [
       div({class: 'p-12 rounded-xl bg-base-100 text-base-content flex flex-col gap-2 min-h-96 w-96'})
-        .append(CounterButton({buttonText}))
-        .append(CounterDisplay({}))
+        .append(new CounterButton({buttonText}))
+        .append(new CounterDisplay({}))
         .append(
           div({class: 'flex flex-wrap gap-1'})
-            .append(ChunkedList({chunks, component: CounterItem}))
+            .append(new ChunkedList({chunks, component: CounterItem}))
         )
     ]
-  },
-})
+  }
+}
 
-const Application = component({
+class Application extends NugComponent {
   render() {
     return [
       div({class: 'bg-base-300 h-screen inset-0 flex justify-center items-center flex-col gap-2'})
-        .append(Counter({buttonText: "Click me!"}))
+        .append(new Counter({buttonText: "Click me!"}))
         .append(
           anchor({class: "opacity-50 underline", href: "https://github.com/staab/nug"})
             .append(text("Powered by nug"))
         ),
     ]
-  },
-})
+  }
+}
 
-Application({}).mount(document.querySelector('#app')!)
+new Application({}).mount(document.querySelector('#app')!)

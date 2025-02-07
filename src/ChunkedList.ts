@@ -1,7 +1,6 @@
 import type {IWritable, IReadable} from './store.ts'
 import {get, writable} from './store.ts'
-import type {ComponentFactory} from './core.ts'
-import {component} from './core.ts'
+import {NugComponent} from './core.ts'
 
 export type Chunk<T> = IWritable<T[]>
 
@@ -52,22 +51,22 @@ export const deriveChunks = <T>({
 
 export type ChunkedListProps = {
   chunks: Chunks<any>
-  component: ComponentFactory<{item: any}>
+  component: typeof NugComponent<{item: any}>
 }
 
-export const ChunkedList = component<ChunkedListProps>({
+export class ChunkedList extends NugComponent<ChunkedListProps> {
   render({chunks, component}) {
     return chunks.map(chunk => ChunkedListChunk({chunk, component}))
   }
-})
+}
 
 export type ChunkedListChunkProps = {
   chunk: Chunk<any>
-  component: ComponentFactory<{item: any}>
+  component: typeof NugComponent<{item: any}>
 }
 
-export const ChunkedListChunk = component<ChunkedListChunkProps>({
+export class ChunkedListChunk extends NugComponent<ChunkedListChunkProps> {
   render({chunk, component}) {
     return chunk.map(item => component({item}))
   }
-})
+}

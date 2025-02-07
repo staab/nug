@@ -1,7 +1,7 @@
 import type {IReadable, Unsubscriber} from './store.ts'
 
 export interface Nug {
-  render(element: Element): Element[]
+  render(element: Element, reference?: Element): void
   destroy(): void
 }
 
@@ -9,8 +9,11 @@ export type NugElementAttrs = Record<string, any>
 
 export class NugElement implements Nug {
   children: Nug[] = []
+  element: Element | undefined
 
-  constructor(readonly tag: string, readonly attrs: NugElementAttrs) {}
+  constructor(readonly tag: string, readonly attrs: NugElementAttrs) {
+    this.element = document.createElement(this.tag)
+  }
 
   static define(tag: string) {
     return (attrs: NugElementAttrs = {}) => new NugElement(tag, attrs)
@@ -22,27 +25,31 @@ export class NugElement implements Nug {
     return this
   }
 
-  render(element: Element) {
-    const el = document.createElement(this.tag)
+  render(element: Element, reference?: Element) {
+    this.element = document.createElement(this.tag)
 
     for (const [k, v] of Object.entries(this.attrs)) {
       if (typeof v === 'function') {
-        (el as any)[k] = v
+        (this.element as any)[k] = v
       } else {
-        el.setAttribute(k, v)
+        this.element.setAttribute(k, v)
       }
     }
 
     for (const child of this.children) {
-      child.render(el)
+      child.render(this.element)
     }
 
-    element.appendChild(el)
-
-    return [el]
+    if (reference) {
+      element.insertBefore(this.element, reference)
+    } else {
+      element.appendChild(this.element)
+    }
   }
 
   destroy() {
+    this.element?.remove()
+
     for (const child of this.children) {
       child.destroy()
     }
@@ -58,8 +65,6 @@ export class NugText implements Nug {
     temp.innerText = this.text
 
     element.textContent += temp.innerHTML
-
-    return []
   }
 
   destroy() {}
@@ -70,8 +75,6 @@ export class NugUnsafe implements Nug {
 
   render(element: Element) {
     element.textContent = this.html
-
-    return []
   }
 
   destroy() {}
@@ -86,11 +89,21 @@ export type ComponentProps = Record<string, any>
 
 export type ComponentFactory<P extends ComponentProps> = (props: P) => NugComponent<P>
 
+const makePlaceholder = () => {
+  const element = document.createElement('span')
+
+  element.style.display = "none"
+
+  return element
+}
+
 export class NugComponent<P extends ComponentProps> implements Nug {
   protected subs: Unsubscriber[] = []
+  protected placeholder = makePlaceholder()
   protected container: Element | undefined
+  protected reference: Element | undefined
   protected elements: Element[] = []
-  protected nugs: Nug[] = []
+  protected children: Nug[] = []
 
   constructor(private options: ComponentOptions<P>, private props: P) {}
 
@@ -99,22 +112,23 @@ export class NugComponent<P extends ComponentProps> implements Nug {
   }
 
   private update = () => {
-    this.nugs.splice(0).forEach(nug => nug.destroy())
-    this.elements.splice(0).forEach(element => element.remove())
+    this.children.splice(0).forEach(child => child.destroy())
 
-    for (const nug of this.options.render(this.props)) {
-      this.nugs.push(nug)
+    for (const child of this.options.render(this.props)) {
+      this.children.push(child)
 
-      for (const element of nug.render(this.container!)) {
-        this.elements.push(element)
-      }
+      child.render(this.container!, this.placeholder)
     }
-
-    return this.elements
   }
 
-  render(element: Element) {
+  render(element: Element, reference?: Element) {
     this.container = element
+
+    if (reference) {
+      this.container.insertBefore(this.placeholder, reference)
+    } else {
+      this.container.appendChild(this.placeholder)
+    }
 
     for (const v of Object.values(this.props)) {
       if (v.subscribe) {
@@ -128,16 +142,14 @@ export class NugComponent<P extends ComponentProps> implements Nug {
       }
     }
 
-    return this.update()
+    this.update()
   }
 
   destroy() {
-    for (const element of this.elements) {
-      element.remove()
-    }
+    this.placeholder.remove()
 
-    for (const nug of this.nugs) {
-      nug.destroy()
+    for (const child of this.children) {
+      child.destroy()
     }
 
     for (const cb of this.subs) {

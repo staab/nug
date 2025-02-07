@@ -10,13 +10,15 @@
     <div id="app"></div>
     <script type="module" src="/src/main.ts"></script>
     <script type="module">
-      import {Component, div, button, span, text, Store, mount, component} from '/src/main.ts'
+      import {Component, div, button, span, text, Store, component} from '/src/main.ts'
 
       const count = new Store(0)
 
       const incrementCount = () => count.update(c => c + 1)
 
       class Counter extends Component {
+        state = {count}
+
         onClick = () => incrementCount()
 
         render() {
@@ -32,11 +34,7 @@
         }
       }
 
-      const app = document.querySelector('#app')
-      const root = new Application({})
-      const state = {count}
-
-      mount(app, root, state)
+      new Application({}).mount(document.querySelector('#app'))
     </script>
   </body>
 </html>

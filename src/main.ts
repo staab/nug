@@ -84,7 +84,13 @@ export class NugComponent {
   constructor(private component: Component) {}
 
   render() {
-    return Nug.render(ensurePlural(this.component.render()))
+    const element = document.createElement('div')
+
+    this.component.mount(element)
+
+    Nug.render(ensurePlural(this.component.render()))
+
+    return element
   }
 }
 
@@ -152,9 +158,12 @@ export class Store<T> {
 
 export type ComponentProps = Record<string, any>
 
+export type ComponentState = Record<string, Store<any>>
+
 export class Component<P extends ComponentProps = ComponentProps> {
   protected element: Element | undefined
   protected subs: Unsubscriber[] = []
+  declare protected state: ComponentState | undefined
 
   constructor(protected props: P) {}
 
@@ -167,13 +176,11 @@ export class Component<P extends ComponentProps = ComponentProps> {
       }
     }
 
-    this.update()
-  }
-
-  destroy() {
-    for (const cb of this.subs) {
-      cb()
+    for (const v of Object.values(this.state || {})) {
+      this.subs.push(v.subscribe(this.update, {initial: false}))
     }
+
+    this.update()
   }
 
   update = () => {
@@ -190,30 +197,13 @@ export class Component<P extends ComponentProps = ComponentProps> {
     }
   }
 
+  destroy() {
+    for (const cb of this.subs) {
+      cb()
+    }
+  }
+
   render(): Nug[] {
     return []
   }
 }
-
-// Application
-
-export type MountState = Record<string, Store<any>>
-
-export const mount = <P extends ComponentProps, S extends MountState>(element: Element, component: Component<P>, state: S) => {
-  const subs: Unsubscriber[] = []
-
-  for (const v of Object.values(state)) {
-    if (v instanceof Store) {
-      subs.push(v.subscribe(component.update, {initial: false}))
-    }
-  }
-
-  component.mount(element)
-
-  return () => {
-    for (const cb of subs) {
-      cb()
-    }
-  }
-}
-

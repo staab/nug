@@ -50,9 +50,9 @@ export const deriveChunks = <T>({
   return chunks
 }
 
-export type ChunkedListProps<T = any> = {
-  chunks: Chunks<T>
-  component: ComponentFactory<{item: T}>
+export type ChunkedListProps = {
+  chunks: Chunks<any>
+  component: ComponentFactory<{item: any}>
 }
 
 export const ChunkedList = component<ChunkedListProps>({
@@ -61,9 +61,9 @@ export const ChunkedList = component<ChunkedListProps>({
   }
 })
 
-export type ChunkedListChunkProps<T = any> = {
-  chunk: Chunk<T>
-  component: ComponentFactory<{item: T}>
+export type ChunkedListChunkProps = {
+  chunk: Chunk<any>
+  component: ComponentFactory<{item: any}>
 }
 
 export const ChunkedListChunk = component<ChunkedListChunkProps>({

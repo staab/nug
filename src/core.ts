@@ -84,31 +84,32 @@ export class NugUnsafe implements Nug {
 
 export type ComponentProps = Record<string, any>
 
-export type UnwrapStoreProps<FullProps> = {
-  [K in keyof FullProps]: UnwrapStore<FullProps[K]>
+export type UnwrapStoreProps<Props> = {
+  [K in keyof Props]: UnwrapStore<Props[K]>
 }
 
-export type ComponentOptions<InputProps extends ComponentProps, FullProps extends InputProps = InputProps> = {
-  getNugs: (props: UnwrapStoreProps<FullProps>) => Nug[]
-  addProps?: (props: InputProps) => FullProps
+export type ComponentOptions<Props extends ComponentProps = ComponentProps> = {
+  getNugs: (props: UnwrapStoreProps<Props>) => Nug[]
+  addProps?: (props: Props) => Props
 }
 
-export type ComponentFactory<InputProps extends ComponentProps, FullProps extends InputProps = InputProps> = (props: InputProps) => NugComponent<InputProps, FullProps>
+export type ComponentFactory<Props extends ComponentProps = ComponentProps> =
+  (props: Props) => NugComponent<Props>
 
-export class NugComponent<InputProps extends ComponentProps, FullProps extends InputProps = InputProps> implements Nug {
+export class NugComponent<Props extends ComponentProps = ComponentProps> implements Nug {
   protected subs: Unsubscriber[] = []
   protected placeholder = document.createComment("nug placeholder")
   protected container: Element | undefined
   protected elements: Element[] = []
   protected children: Nug[] = []
 
-  constructor(private options: ComponentOptions<InputProps, FullProps>, private props: InputProps) {}
+  constructor(private options: ComponentOptions<Props>, private props: Props) {}
 
-  static define<InputProps extends ComponentProps, FullProps extends InputProps = InputProps>(options: ComponentOptions<InputProps, FullProps>) {
-    return (props: InputProps) => new NugComponent(options, props)
+  static define<Props extends ComponentProps = ComponentProps>(options: ComponentOptions<Props>) {
+    return (props: Props) => new NugComponent(options, props)
   }
 
-  private update = (data: FullProps) => {
+  private update = (data: Props) => {
     this.children.splice(0).forEach(child => child.destroy())
 
     for (const child of this.options.getNugs(data)) {
@@ -139,7 +140,7 @@ export class NugComponent<InputProps extends ComponentProps, FullProps extends I
             data[k] = value
 
             if (initialized) {
-              this.update(data as FullProps)
+              this.update(data as Props)
             }
           })
         )
@@ -177,8 +178,6 @@ export const text = (t: any) => new NugText(t.toString())
 
 export const unsafe = (t: any) => new NugUnsafe(t.toString())
 
-export const component = <
-  InputProps extends ComponentProps,
-  FullProps extends InputProps = InputProps
->(options: ComponentOptions<InputProps, FullProps>) =>
-  NugComponent.define(options)
+export const component = <Props extends ComponentProps = ComponentProps>(
+  options: ComponentOptions<Props>
+) => NugComponent.define(options)

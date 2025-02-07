@@ -26,7 +26,7 @@ export const deriveChunks = <T>({
       const chunkIndex = itemIndex / chunkSize
       const chunk = chunksCopy[chunkIndex]
 
-      // If we're adding a chunk, we need to re-render everything
+      // If we're adding a chunk, we need to re-mount everything
       if (!chunk) {
         shouldUpdateChunks = true
         chunksCopy.push(writable(items.slice(itemIndex, itemIndex + chunkSize)))
@@ -56,7 +56,7 @@ export type ChunkedListProps = {
 }
 
 export const ChunkedList = component<ChunkedListProps>({
-  getNugs({chunks, component}) {
+  render({chunks, component}) {
     return chunks.map(chunk => ChunkedListChunk({chunk, component}))
   }
 })
@@ -67,7 +67,7 @@ export type ChunkedListChunkProps = {
 }
 
 export const ChunkedListChunk = component<ChunkedListChunkProps>({
-  getNugs({chunk, component}) {
+  render({chunk, component}) {
     return chunk.map(item => component({item}))
   }
 })

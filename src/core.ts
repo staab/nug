@@ -3,7 +3,7 @@ import type {Unsubscriber, UnwrapStore} from './store.ts'
 export type Reference = Element | Comment
 
 export interface Nug {
-  render(element: Element, reference?: Reference): void
+  mount(element: Element, reference?: Reference): void
   destroy(): void
 }
 
@@ -27,7 +27,7 @@ export class NugElement implements Nug {
     return this
   }
 
-  render(element: Element, reference?: Reference) {
+  mount(element: Element, reference?: Reference) {
     this.element = document.createElement(this.tag)
 
     for (const [k, v] of Object.entries(this.attrs)) {
@@ -39,7 +39,7 @@ export class NugElement implements Nug {
     }
 
     for (const child of this.children) {
-      child.render(this.element)
+      child.mount(this.element)
     }
 
     if (reference) {
@@ -61,7 +61,7 @@ export class NugElement implements Nug {
 export class NugText implements Nug {
   constructor(private text: string) {}
 
-  render(element: Element) {
+  mount(element: Element) {
     const temp = document.createElement("div")
 
     temp.innerText = this.text
@@ -75,7 +75,7 @@ export class NugText implements Nug {
 export class NugUnsafe implements Nug {
   constructor(private html: string) {}
 
-  render(element: Element) {
+  mount(element: Element) {
     element.textContent = this.html
   }
 
@@ -89,7 +89,7 @@ export type UnwrapStoreProps<Props> = {
 }
 
 export type ComponentOptions<Props extends ComponentProps = ComponentProps> = {
-  getNugs: (props: UnwrapStoreProps<Props>) => Nug[]
+  render: (props: UnwrapStoreProps<Props>) => Nug[]
   addProps?: (props: Props) => Props
 }
 
@@ -112,14 +112,14 @@ export class NugComponent<Props extends ComponentProps = ComponentProps> impleme
   private update = (data: Props) => {
     this.children.splice(0).forEach(child => child.destroy())
 
-    for (const child of this.options.getNugs(data)) {
+    for (const child of this.options.render(data)) {
       this.children.push(child)
 
-      child.render(this.container!, this.placeholder)
+      child.mount(this.container!, this.placeholder)
     }
   }
 
-  render(element: Element, reference?: Reference) {
+  mount(element: Element, reference?: Reference) {
     let initialized = false
     const data: any = {}
     const props = this.options.addProps?.(this.props) || this.props

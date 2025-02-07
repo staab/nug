@@ -25,7 +25,7 @@ type CounterButtonProps = {
 }
 
 const CounterButton = component<CounterButtonProps>({
-  getNugs({buttonText}) {
+  render({buttonText}) {
     return [
       button({click: incrementCount, class: 'btn btn-primary'})
         .append(text(buttonText))
@@ -37,7 +37,7 @@ const CounterDisplay = component({
   addProps(props) {
     return {...props, count}
   },
-  getNugs({count}) {
+  render({count}) {
     const word = count === 1 ? 'time' : 'times'
 
     return [
@@ -52,7 +52,7 @@ type CounterItemProps = {
 }
 
 const CounterItem = component<CounterItemProps>({
-  getNugs({item}) {
+  render({item}) {
     return [div().append(text(`Item #${item}`))]
   },
 })
@@ -62,7 +62,7 @@ type CounterProps = {
 }
 
 const Counter = component<CounterProps>({
-  getNugs({buttonText}) {
+  render({buttonText}) {
     return [
       div({class: 'p-12 rounded-xl bg-base-100 text-base-content flex flex-col gap-2 min-h-96 w-96'})
         .append(CounterButton({buttonText}))
@@ -76,7 +76,7 @@ const Counter = component<CounterProps>({
 })
 
 const Application = component({
-  getNugs() {
+  render() {
     return [
       div({class: 'bg-base-300 h-screen inset-0 flex justify-center items-center flex-col gap-2'})
         .append(Counter({buttonText: "Click me!"}))
@@ -88,4 +88,4 @@ const Application = component({
   },
 })
 
-Application({}).render(document.querySelector('#app')!)
+Application({}).mount(document.querySelector('#app')!)

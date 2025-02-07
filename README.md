@@ -13,7 +13,7 @@ This is alpha software, don't use it unless you're willing to read the code (the
 
 # Example
 
-The code below is similar to the code in example.ts. To see the demo, clone the repository and run `npm i && npm run dev` or visit [https://nug-n8tt.onrender.com/](https://nug-n8tt.onrender.com/).
+The code below is similar to the code in example.ts. To see the demo, clone the repository and run `npm i && npm run dev` or visit [https://nug-n8tt.onmount.com/](https://nug-n8tt.onmount.com/).
 
 ```typescript
 import {div, button, span, text, writable, derived, deriveChunks, component, ChunkedList} from 'nug'
@@ -32,7 +32,7 @@ const items = derived([count], ([$count]) => {
   return $items
 })
 
-// The ChunkedList helpers help manage re-rendering. The entire list will only re-render
+// The ChunkedList helpers help manage re-mounting. The entire list will only re-mount
 // when items move from one chunk to another, or when a new chunk is added. To see this in
 // action, watch the dev tools when running the demo to see which dom nodes get updated.
 const chunks = deriveChunks({
@@ -46,7 +46,7 @@ const incrementCount = () => count.update(c => c + 1)
 
 // A counter button
 const CounterButton = component({
-  render({buttonText}) {
+  mount({buttonText}) {
     return [
       button({click: incrementCount}).append(text(buttonText))
     ]
@@ -58,7 +58,7 @@ const CounterDisplay = component({
   watch() {
     return [count]
   },
-  render() {
+  mount() {
     return [
       span({style: 'color: red; padding-left: 12px;'}).append(text(count.get())),
     ]
@@ -67,7 +67,7 @@ const CounterDisplay = component({
 
 // This displays one of our items
 const CounterItem = component({
-  render({item}) {
+  mount({item}) {
     return [div().append(text(item))]
   },
 })
@@ -75,7 +75,7 @@ const CounterItem = component({
 // Our couter component. ChunkedList takes CounterItem as a component, along with
 // our item tree
 const Counter = component({
-  render({buttonText}) {
+  mount({buttonText}) {
     return [
       CounterButton({buttonText}),
       CounterDisplay({}),
@@ -86,7 +86,7 @@ const Counter = component({
 
 // One final wrapper component
 const Application = component({
-  render() {
+  mount() {
     return [
       Counter({buttonText: "Click me!"}),
     ]
@@ -94,5 +94,5 @@ const Application = component({
 })
 
 // Mount our application
-Application({}).render(document.querySelector('#app'))
+Application({}).mount(document.querySelector('#app'))
 ```

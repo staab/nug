@@ -6,107 +6,106 @@ export const ensurePlural = <T>(x: T | T[]) => (x instanceof Array ? x : [x])
 
 export type NugAttrs = Record<string, any>
 
-export class Nug {
-  children: NugChild[] = []
+export interface Nug {
+  render(element: Element): Element[]
+  destroy(): void
+}
+
+export class NugElement implements Nug {
+  children: Nug[] = []
 
   constructor(readonly tag: string, readonly attrs: NugAttrs) {}
 
-  static defineElement(tag: string) {
-    return (attrs: NugAttrs = {}) => new Nug(tag, attrs)
+  static define(tag: string) {
+    return (attrs: NugAttrs = {}) => new NugElement(tag, attrs)
   }
 
-  static render(nugs: Nug[]) {
-    return nugs.flatMap(nug => nug.render())
-  }
-
-  append(child: NugChild) {
+  append(child: Nug) {
     this.children.push(child)
 
     return this
   }
 
-  render() {
-    const element = document.createElement(this.tag)
+  render(element: Element) {
+    const el = document.createElement(this.tag)
 
     for (const [k, v] of Object.entries(this.attrs)) {
       if (typeof v === 'function') {
-        (element as any)[k] = v
+        (el as any)[k] = v
       } else {
-        element.setAttribute(k, v)
+        el.setAttribute(k, v)
       }
     }
-
-    let textContent: string[] = []
 
     for (const child of this.children) {
-      const rendered = child.render()
-
-      if (typeof rendered === 'string') {
-        textContent.push(rendered)
-      } else if (textContent.length > 0) {
-        console.error("Unable to mix text and elements", this.children)
-      } else {
-        for (const item of ensurePlural(rendered)) {
-          element.appendChild(item)
-        }
-      }
+      child.render(el)
     }
 
-    if (textContent.length > 0) {
-      element.textContent = textContent.join(' ')
-    }
+    element.appendChild(el)
 
-    return element
+    return [el]
+  }
+
+  destroy() {
+    for (const child of this.children) {
+      child.destroy()
+    }
   }
 }
 
-export class NugText {
+export class NugText implements Nug {
   constructor(private text: string) {}
 
-  render() {
-    const element = document.createElement("div")
+  render(element: Element) {
+    const temp = document.createElement("div")
 
-    element.innerText = this.text
+    temp.innerText = this.text
 
-    return element.innerHTML
+    element.textContent += temp.innerHTML
+
+    return []
   }
+
+  destroy() {}
 }
 
-export class NugUnsafe {
+export class NugUnsafe implements Nug {
   constructor(private html: string) {}
 
-  render() {
-    return this.html
+  render(element: Element) {
+    element.textContent = this.html
+
+    return []
   }
+
+  destroy() {}
 }
 
-export class NugComponent {
+export class NugComponent implements Nug {
   constructor(private component: Component) {}
 
-  render() {
-    const element = document.createElement('div')
+  render(element: Element) {
+    return this.component.mount(element)
+  }
 
-    this.component.mount(element)
-
-    Nug.render(ensurePlural(this.component.render()))
-
-    return element
+  destroy() {
+    this.component.destroy()
   }
 }
 
-export type NugChild = Nug | NugText | NugUnsafe | NugComponent
+export const div = NugElement.define('div')
 
-export const div = Nug.defineElement('div')
+export const span = NugElement.define('span')
 
-export const span = Nug.defineElement('span')
-
-export const button = Nug.defineElement('button')
+export const button = NugElement.define('button')
 
 export const text = (t: any) => new NugText(t.toString())
 
 export const unsafe = (t: any) => new NugUnsafe(t.toString())
 
 export const component = (component: Component) => new NugComponent(component)
+
+export const render = (element: Element, nugs: Nug[]) => nugs.flatMap(nug => nug.render(element))
 
 // Stores
 
@@ -158,12 +157,12 @@ export class Store<T> {
 
 export type ComponentProps = Record<string, any>
 
-export type ComponentState = Record<string, Store<any>>
-
 export class Component<P extends ComponentProps = ComponentProps> {
   protected element: Element | undefined
   protected subs: Unsubscriber[] = []
-  declare protected state: ComponentState | undefined
+  protected nugs: Nug[] = []
+  protected elements: Element[] = []
+  declare protected watch: Store<any>[] | undefined
 
   constructor(protected props: P) {}
 
@@ -176,11 +175,11 @@ export class Component<P extends ComponentProps = ComponentProps> {
       }
     }
 
-    for (const v of Object.values(this.state || {})) {
+    for (const v of this.watch || []) {
       this.subs.push(v.subscribe(this.update, {initial: false}))
     }
 
-    this.update()
+    return this.update()
   }
 
   update = () => {
@@ -188,16 +187,31 @@ export class Component<P extends ComponentProps = ComponentProps> {
       throw new Error(`${this.constructor.name} updated before it was mounted`)
     }
 
-    const nugs = ensurePlural(this.render())
-
-    this.element.innerHTML = ''
-
-    for (const child of Nug.render(nugs)) {
-      this.element.appendChild(child)
+    for (const nug of this.nugs) {
+      nug.destroy()
     }
+
+    for (const element of this.elements) {
+      element.remove()
+    }
+
+    console.log('update', this.constructor.name)
+
+    this.nugs = ensurePlural(this.render())
+    this.elements = render(this.element, this.nugs)
+
+    return this.elements
   }
 
   destroy() {
+    for (const element of this.elements) {
+      element.remove()
+    }
+
+    for (const nug of this.nugs) {
+      nug.destroy()
+    }
+
     for (const cb of this.subs) {
       cb()
     }

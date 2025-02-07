@@ -16,15 +16,26 @@
 
       const incrementCount = () => count.update(c => c + 1)
 
-      class Counter extends Component {
-        state = {count}
+      class CounterButton extends Component {
+        render() {
+          return button({onclick: incrementCount}).append(text(this.props.buttonText))
+        }
+      }
 
-        onClick = () => incrementCount()
+      class CounterDisplay extends Component {
+        watch = [count]
 
         render() {
-          return div()
-            .append(button({onclick: this.onClick}).append(text(this.props.buttonText)))
-            .append(span({style: 'color: red; padding-left: 12px;'}).append(text(count.get())))
+          return span({style: 'color: red; padding-left: 12px;'}).append(text(count.get()))
+        }
+      }
+
+      class Counter extends Component {
+        render() {
+          return [
+            component(new CounterButton({buttonText: this.props.buttonText})),
+            component(new CounterDisplay({})),
+          ]
         }
       }
 

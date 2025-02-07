@@ -1,123 +1,4 @@
-// Utils
-
-export const ensurePlural = <T>(x: T | T[]) => (x instanceof Array ? x : [x])
-
-// Stores
-
-export type Subscriber<T> = (value: T) => void
-
-export type Unsubscriber = () => void
-
-export type Updater<T> = (value: T) => T
-
-export type SubscribeOptions = {
-  initial?: boolean
-}
-
-export interface IReadable<T> {
-	get(): T
-	subscribe(run: Subscriber<T>, options: SubscribeOptions): Unsubscriber
-}
-
-export interface IWritable<T> extends IReadable<T> {
-	set(value: T): void
-	update(updater: Updater<T>): void
-}
-
-export type Stores = Array<IReadable<any>>
-
-export type StoresValues<T> = T extends IReadable<infer U>
-	? U
-	: { [K in keyof T]: T[K] extends IReadable<infer U> ? U : never };
-
-export class Readable<T> implements IReadable<T> {
-  protected subs: Subscriber<T>[] = []
-
-  constructor(protected value: T) {}
-
-  get() {
-    return this.value
-  }
-
-  subscribe(cb: Subscriber<T>, {initial = true}: SubscribeOptions = {}) {
-    this.subs.push(cb)
-
-    if (initial) {
-      cb(this.value)
-    }
-
-    return () => {
-      this.subs = this.subs.filter(s => s !== cb)
-    }
-  }
-}
-
-export const readable = <T>(value: T | undefined) => new Readable(value)
-
-export class Writable<T> extends Readable<T> {
-  set(value: T) {
-    this.value = value
-
-    for (const cb of this.subs) {
-      cb(this.value)
-    }
-  }
-
-  update(cb: Updater<T>) {
-    this.set(cb(this.value))
-  }
-}
-
-export const writable = <T>(value: T | undefined) => new Writable(value)
-
-export class Derived<S extends Stores, T> implements IReadable<T> {
-  private subs: Subscriber<T>[] = []
-  private unsubscribers: Unsubscriber[] = []
-  private value: T
-
-  constructor(stores: S, cb: (values: StoresValues<S>) => T) {
-    const getStoresValues = () => stores.map(s => s.get()) as StoresValues<S>
-
-    this.value = cb(getStoresValues())
-
-    for (const store of stores) {
-      this.unsubscribers.push(
-        store.subscribe(() => {
-          this.value = cb(getStoresValues())
-        }, {
-          initial: false,
-        })
-      )
-    }
-  }
-
-  get() {
-    return this.value
-  }
-
-  subscribe(cb: Subscriber<T>, {initial = true}: SubscribeOptions = {}) {
-    this.subs.push(cb)
-
-    if (initial) {
-      cb(this.value)
-    }
-
-    return () => {
-      this.subs = this.subs.filter(s => s !== cb)
-    }
-  }
-
-  destroy() {
-    for (const unsub of this.unsubscribers) {
-      unsub()
-    }
-  }
-}
-
-export const derived = <S extends Stores, T>(stores: S, cb: (values: StoresValues<S>) => T) =>
-  new Derived(stores, cb)
-
-// Nug
+import type {IReadable, Unsubscriber} from './store.ts'
 
 export interface Nug {
   render(element: Element): Element[]
@@ -198,10 +79,12 @@ export class NugUnsafe implements Nug {
 
 export type ComponentOptions<P extends ComponentProps> = {
   render: (props: P) => Nug[]
-  watch?: Readable<any>[]
+  watch?: (props: P) => IReadable<any>[]
 }
 
 export type ComponentProps = Record<string, any>
+
+export type ComponentFactory<P extends ComponentProps> = (props: P) => NugComponent<P>
 
 export class NugComponent<P extends ComponentProps> implements Nug {
   protected subs: Unsubscriber[] = []
@@ -219,7 +102,7 @@ export class NugComponent<P extends ComponentProps> implements Nug {
     this.nugs.splice(0).forEach(nug => nug.destroy())
     this.elements.splice(0).forEach(element => element.remove())
 
-    for (const nug of ensurePlural(this.options.render(this.props))) {
+    for (const nug of this.options.render(this.props)) {
       this.nugs.push(nug)
 
       for (const element of nug.render(this.container!)) {
@@ -239,8 +122,10 @@ export class NugComponent<P extends ComponentProps> implements Nug {
       }
     }
 
-    for (const v of this.options.watch || []) {
-      this.subs.push(v.subscribe(this.update, {initial: false}))
+    if (this.options.watch) {
+      for (const v of this.options.watch(this.props)) {
+        this.subs.push(v.subscribe(this.update, {initial: false}))
+      }
     }
 
     return this.update()

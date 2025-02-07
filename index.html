@@ -8,37 +8,51 @@
   </head>
   <body>
     <div id="app"></div>
-    <script type="module" src="/src/main.ts"></script>
     <script type="module">
-      import {div, button, span, text, writable, component} from '/src/main.ts'
+      import {div, button, span, text, writable, derived, deriveChunks, component, ChunkedList} from '/src/index.ts'
 
       const count = writable(0)
+
+      const items = derived([count], ([$count]) => {
+        const $items = []
+
+        for (let i = 0; i < $count; i++) {
+          $items.push(i)
+        }
+
+        return $items
+      })
+
+      const chunks = deriveChunks({
+        chunkSize: 3,
+        store: items,
+        getKey: x => x,
+      })
 
       const incrementCount = () => count.update(c => c + 1)
 
       const CounterButton = component({
         render({buttonText}) {
-          return button({onclick: incrementCount}).append(text(buttonText))
+          return [
+            button({onclick: incrementCount}).append(text(buttonText))
+          ]
         },
       })
 
       const CounterDisplay = component({
-        watch: [count],
+        watch() {
+          return [count]
+        },
         render() {
-          return span({style: 'color: red; padding-left: 12px;'}).append(text(count.get()))
+          return [
+            span({style: 'color: red; padding-left: 12px;'}).append(text(count.get())),
+          ]
         },
       })
 
-      const CounterItems = component({
-        watch: [count],
-        render() {
-          const nugs = []
-
-          for (let i = 0; i < count.get(); i++) {
-            nugs.push(div().append(text(i)))
-          }
-
-          return nugs
+      const CounterItem = component({
+        render({item}) {
+          return [div().append(text(item))]
         },
       })
 
@@ -47,14 +61,16 @@
           return [
             CounterButton({buttonText}),
             CounterDisplay({}),
-            CounterItems({}),
+            ChunkedList({chunks, component: CounterItem}),
           ]
         },
       })
 
       const Application = component({
         render() {
-          return Counter({buttonText: "Click me!"})
+          return [
+            Counter({buttonText: "Click me!"}),
+          ]
         },
       })
 

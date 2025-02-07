@@ -7,7 +7,6 @@ export const ensurePlural = <T>(x: T | T[]) => (x instanceof Array ? x : [x])
 export type NugAttrs = Record<string, any>
 
 export class Nug {
-  id = ""
   children: NugChild[] = []
 
   constructor(readonly tag: string, readonly attrs: NugAttrs) {}
@@ -20,32 +19,14 @@ export class Nug {
     return nugs.flatMap(nug => nug.render())
   }
 
-  as(id: string) {
-    this.id = id
-
-    return this
-  }
-
   append(child: NugChild) {
     this.children.push(child)
 
     return this
   }
 
-  getElement() {
-    if (this.id) {
-      const found = document.getElementById(this.id)
-
-      if (found) {
-        return found
-      }
-    }
-
-    return document.createElement(this.tag)
-  }
-
   render() {
-    const element = this.getElement()
+    const element = document.createElement(this.tag)
 
     for (const [k, v] of Object.entries(this.attrs)) {
       if (typeof v === 'function') {

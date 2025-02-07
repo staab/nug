@@ -21,7 +21,7 @@
 
         render() {
           return div()
-            .append(button({onclick: this.onClick}).append(text(this.props.buttonText)).as('button'))
+            .append(button({onclick: this.onClick}).append(text(this.props.buttonText)))
             .append(span({style: 'color: red; padding-left: 12px;'}).append(text(count.get())))
         }
       }

@@ -1,7 +1,9 @@
 import type {IReadable, Unsubscriber} from './store.ts'
 
+export type Reference = Element | Comment
+
 export interface Nug {
-  render(element: Element, reference?: Element): void
+  render(element: Element, reference?: Reference): void
   destroy(): void
 }
 
@@ -25,12 +27,12 @@ export class NugElement implements Nug {
     return this
   }
 
-  render(element: Element, reference?: Element) {
+  render(element: Element, reference?: Reference) {
     this.element = document.createElement(this.tag)
 
     for (const [k, v] of Object.entries(this.attrs)) {
       if (typeof v === 'function') {
-        (this.element as any)[k] = v
+        this.element.addEventListener(k, v)
       } else {
         this.element.setAttribute(k, v)
       }
@@ -89,19 +91,10 @@ export type ComponentProps = Record<string, any>
 
 export type ComponentFactory<P extends ComponentProps> = (props: P) => NugComponent<P>
 
-const makePlaceholder = () => {
-  const element = document.createElement('span')
-
-  element.style.display = "none"
-
-  return element
-}
-
 export class NugComponent<P extends ComponentProps> implements Nug {
   protected subs: Unsubscriber[] = []
-  protected placeholder = makePlaceholder()
+  protected placeholder = document.createComment("nug placeholder")
   protected container: Element | undefined
-  protected reference: Element | undefined
   protected elements: Element[] = []
   protected children: Nug[] = []
 
@@ -121,8 +114,9 @@ export class NugComponent<P extends ComponentProps> implements Nug {
     }
   }
 
-  render(element: Element, reference?: Element) {
+  render(element: Element, reference?: Reference) {
     this.container = element
+    this.container.appendChild(this.placeholder)
 
     if (reference) {
       this.container.insertBefore(this.placeholder, reference)

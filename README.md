@@ -4,9 +4,17 @@ Nug is a minimal reactive DOM system, based on svelte 4. It does not use DOM dif
 
 This is alpha software, don't use it unless you're willing to read the code (there isn't very much of it).
 
+# Todo
+
+- [ ] Remove get
+- [ ] Remove subscribe options, use a utility to skip the first run
+- [ ] Convert props/watch into arguments to render? Maybe not
+- [ ] Change to class components for debugging
+- [ ] Fix reactivity when removing items from chunkedlists
+
 # Example
 
-The code below is similar to the code in index.html. To see the demo, clone the repository and run `npm i && npm run dev` or visit [https://nug-n8tt.onrender.com/](https://nug-n8tt.onrender.com/).
+The code below is similar to the code in example.ts. To see the demo, clone the repository and run `npm i && npm run dev` or visit [https://nug-n8tt.onrender.com/](https://nug-n8tt.onrender.com/).
 
 ```typescript
 import {div, button, span, text, writable, derived, deriveChunks, component, ChunkedList} from 'nug'

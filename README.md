@@ -6,7 +6,7 @@ This is alpha software, don't use it unless you're willing to read the code (the
 
 # Example
 
-The code below is similar to the code in index.html. To see the demo, clone the repository and run `npm i && npm run dev`.
+The code below is similar to the code in index.html. To see the demo, clone the repository and run `npm i && npm run dev` or visit [https://nug-n8tt.onrender.com/](https://nug-n8tt.onrender.com/).
 
 ```typescript
 import {div, button, span, text, writable, derived, deriveChunks, component, ChunkedList} from 'nug'

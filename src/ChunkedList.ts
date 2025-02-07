@@ -1,11 +1,12 @@
-import type {IWritable, IReadable} from './store.ts'
-import {get, writable} from './store.ts'
+import type {IWritable, IReadable, Subscriber, Unsubscriber} from './store.ts'
+import {writable} from './store.ts'
 import type {ComponentFactory} from './core.ts'
 import {component} from './core.ts'
 
-export type Chunk<T> = IWritable<T[]>
 
-export type Chunks<T> = IWritable<Chunk<T>[]>
+export type Chunk<T> = IReadable<T[]>
+
+export type Chunks<T> = IReadable<Chunk<T>[]>
 
 export const deriveChunks = <T>({
   store,
@@ -15,39 +16,86 @@ export const deriveChunks = <T>({
   chunkSize: number,
   store: IReadable<T[]>,
   getKey: (item: T) => string | number,
-}) => {
-  const chunks: Chunks<T> = writable<IWritable<T[]>[]>([])
+}): Chunks<T> => {
+  let subscribers: Subscriber<IReadable<T[]>[]>[] = []
+  let unsubscribe: Unsubscriber | undefined
+  let chunkStores: IWritable<T[]>[] = []
+  let chunks: T[][] = []
 
-  store.subscribe(items => {
-    const chunksCopy = [...get(chunks)]
+  return {
+    subscribe(run: Subscriber<IReadable<T[]>[]>) {
+      subscribers.push(run)
 
-    let shouldUpdateChunks = false
-    for (let itemIndex = 0; itemIndex < items.length; itemIndex += chunkSize) {
-      const chunkIndex = itemIndex / chunkSize
-      const chunk = chunksCopy[chunkIndex]
+      if (!unsubscribe) {
+        unsubscribe = store.subscribe(items => {
+          const maxChunks = Math.ceil(items.length / chunkSize)
 
-      // If we're adding a chunk, we need to re-mount everything
-      if (!chunk) {
-        shouldUpdateChunks = true
-        chunksCopy.push(writable(items.slice(itemIndex, itemIndex + chunkSize)))
-        continue
+          let dirty = false
+
+          if (chunks.length > maxChunks) {
+            chunks = chunks.slice(0, maxChunks)
+            chunkStores = chunkStores.slice(0, maxChunks)
+            dirty = true
+          }
+
+          for (let chunkIndex = 0; chunkIndex < maxChunks; chunkIndex++) {
+            let chunk = chunks[chunkIndex]
+            let chunkStore = chunkStores[chunkIndex]
+            let chunkIsDirty = false
+
+            if (!chunk) {
+              chunk = []
+              chunkStore = writable(chunk)
+              chunks.push(chunk)
+              chunkStores.push(chunkStore)
+              dirty = true
+            }
+
+            const offset = chunkIndex * chunkSize
+
+            if (chunk.length > items.length - offset) {
+              chunk = chunk.slice(0, items.length - offset)
+              chunkIsDirty = true
+            }
+
+            for (let i = 0; i < chunkSize; i++) {
+              const itemIndex = i + offset
+
+              if (!(itemIndex in items) && !(i in chunk)) {
+                break
+              }
+
+              if (getKey(items[itemIndex]) !== getKey(chunk[i])) {
+                chunk[i] = items[itemIndex]
+                chunkIsDirty = true
+              }
+            }
+
+            if (chunkIsDirty) {
+              chunkStore.set(chunk)
+            }
+          }
+
+          if (dirty || !unsubscribe) {
+            for (const subscriber of subscribers) {
+              subscriber(chunkStores)
+            }
+          }
+        })
+      } else {
+        run(chunkStores)
       }
 
-      // If some item within this chunk has changed, invalidate just this chunk
-      for (let i = 0; i < chunkSize; i += 1) {
-        if (getKey(items[itemIndex + i]) !== getKey(get(chunk)[i])) {
-          chunk.set(items.slice(itemIndex, itemIndex + chunkSize))
-          break
+      return () => {
+        subscribers = subscribers.filter(s => s !== run)
+
+        if (subscribers.length === 0) {
+          unsubscribe?.()
+          unsubscribe = undefined
         }
       }
     }
-
-    if (shouldUpdateChunks) {
-      chunks.set(chunksCopy)
-    }
-  })
-
-  return chunks
+  }
 }
 
 export type ChunkedListProps = {

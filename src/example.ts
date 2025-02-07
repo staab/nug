@@ -1,16 +1,9 @@
 import {div, button, span, anchor, text, writable, derived, deriveChunks, component, ChunkedList} from './index.ts'
 
-const count = writable(0)
 
-const items = derived([count], ([$count]) => {
-  const $items = []
+const items = writable<string[]>([])
 
-  for (let i = 0; i < $count; i++) {
-    $items.push(i)
-  }
-
-  return $items
-})
+const count = derived([items], ([$items]) => $items.length)
 
 const chunks = deriveChunks({
   chunkSize: 5,
@@ -18,7 +11,7 @@ const chunks = deriveChunks({
   getKey: x => x,
 })
 
-const incrementCount = () => count.update(c => c + 1)
+const addItem = () => items.update($items => [...$items, Math.random().toString().slice(2, 6)])
 
 type CounterButtonProps = {
   buttonText: string
@@ -27,7 +20,7 @@ type CounterButtonProps = {
 const CounterButton = component<CounterButtonProps>({
   render({buttonText}) {
     return [
-      button({click: incrementCount, class: 'btn btn-primary'})
+      button({click: addItem, class: 'btn btn-primary'})
         .append(text(buttonText))
     ]
   },
@@ -53,7 +46,7 @@ type CounterItemProps = {
 
 const CounterItem = component<CounterItemProps>({
   render({item}) {
-    return [div().append(text(`Item #${item}`))]
+    return [div().append(text(`[${item}]`))]
   },
 })
 

@@ -25,7 +25,7 @@ type CounterButtonProps = {
 }
 
 const CounterButton = component<CounterButtonProps>({
-  render({buttonText}) {
+  getNugs({buttonText}) {
     return [
       button({click: incrementCount, class: 'btn btn-primary'})
         .append(text(buttonText))
@@ -34,16 +34,15 @@ const CounterButton = component<CounterButtonProps>({
 })
 
 const CounterDisplay = component({
-  watch() {
-    return [count]
+  addProps(props) {
+    return {...props, count}
   },
-  render() {
-    const n = count.get()
-    const word = n === 1 ? 'time' : 'times'
+  getNugs({count}) {
+    const word = count === 1 ? 'time' : 'times'
 
     return [
       span({class: 'text-center inline-block opacity-50'})
-        .append(text(`You have clicked ${n} ${word}`)),
+        .append(text(`You have clicked ${count} ${word}`)),
     ]
   },
 })
@@ -53,7 +52,7 @@ type CounterItemProps = {
 }
 
 const CounterItem = component<CounterItemProps>({
-  render({item}) {
+  getNugs({item}) {
     return [div().append(text(`Item #${item}`))]
   },
 })
@@ -63,7 +62,7 @@ type CounterProps = {
 }
 
 const Counter = component<CounterProps>({
-  render({buttonText}) {
+  getNugs({buttonText}) {
     return [
       div({class: 'p-12 rounded-xl bg-base-100 text-base-content flex flex-col gap-2 min-h-96 w-96'})
         .append(CounterButton({buttonText}))
@@ -77,7 +76,7 @@ const Counter = component<CounterProps>({
 })
 
 const Application = component({
-  render() {
+  getNugs() {
     return [
       div({class: 'bg-base-300 h-screen inset-0 flex justify-center items-center flex-col gap-2'})
         .append(Counter({buttonText: "Click me!"}))

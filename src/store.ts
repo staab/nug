@@ -4,13 +4,8 @@ export type Unsubscriber = () => void
 
 export type Updater<T> = (value: T) => T
 
-export type SubscribeOptions = {
-  initial?: boolean
-}
-
 export interface IReadable<T> {
-	get(): T
-	subscribe(run: Subscriber<T>, options?: SubscribeOptions): Unsubscriber
+	subscribe(run: Subscriber<T>): Unsubscriber
 }
 
 export interface IWritable<T> extends IReadable<T> {
@@ -24,21 +19,17 @@ export type StoresValues<T> = T extends IReadable<infer U>
 	? U
 	: { [K in keyof T]: T[K] extends IReadable<infer U> ? U : never };
 
+export type UnwrapStore<T> = T extends IReadable<infer U> ? U : T
+
 export class Readable<T> implements IReadable<T> {
   protected subs: Subscriber<T>[] = []
 
   constructor(protected value: T) {}
 
-  get() {
-    return this.value
-  }
-
-  subscribe(cb: Subscriber<T>, {initial = true}: SubscribeOptions = {}) {
+  subscribe(cb: Subscriber<T>) {
     this.subs.push(cb)
 
-    if (initial) {
-      cb(this.value)
-    }
+    cb(this.value)
 
     return () => {
       this.subs = this.subs.filter(s => s !== cb)
@@ -67,38 +58,39 @@ export const writable = <T>(value: T) => new Writable(value)
 export class Derived<S extends Stores, T> implements IReadable<T> {
   private subs: Subscriber<T>[] = []
   private unsubscribers: Unsubscriber[] = []
+  private storesValues: StoresValues<S>
   private value: T
 
   constructor(stores: S, cb: (values: StoresValues<S>) => T) {
-    const getStoresValues = () => stores.map(s => s.get()) as StoresValues<S>
+    const initialStoresValues: any[] = []
 
-    this.value = cb(getStoresValues())
+    for (let i = 0; i < stores.length; i++) {
+      const store = stores[i]
 
-    for (const store of stores) {
       this.unsubscribers.push(
-        store.subscribe(() => {
-          this.value = cb(getStoresValues())
+        store.subscribe(v => {
+          if (this.storesValues) {
+            this.storesValues[i] = v
+            this.value = cb(this.storesValues)
 
-          for (const sub of this.subs) {
-            sub(this.value)
+            for (const sub of this.subs) {
+              sub(this.value)
+            }
+          } else {
+            initialStoresValues.push(v)
           }
-        }, {
-          initial: false,
         })
       )
     }
+
+    this.storesValues = initialStoresValues as StoresValues<S>
+    this.value = cb(this.storesValues)
   }
 
-  get() {
-    return this.value
-  }
-
-  subscribe(cb: Subscriber<T>, {initial = true}: SubscribeOptions = {}) {
+  subscribe(cb: Subscriber<T>) {
     this.subs.push(cb)
 
-    if (initial) {
-      cb(this.value)
-    }
+    cb(this.value)
 
     return () => {
       this.subs = this.subs.filter(s => s !== cb)
@@ -114,3 +106,15 @@ export class Derived<S extends Stores, T> implements IReadable<T> {
 
 export const derived = <S extends Stores, T>(stores: S, cb: (values: StoresValues<S>) => T) =>
   new Derived(stores, cb)
+
+export const get = <T>(store: IReadable<T>) => {
+  let value: any = undefined
+
+  const unsub = store.subscribe(v => {
+    value = v
+  })
+
+  unsub()
+
+  return value as T
+}

@@ -1,5 +1,5 @@
 import type {IWritable, IReadable} from './store.ts'
-import {writable} from './store.ts'
+import {get, writable} from './store.ts'
 import type {ComponentFactory} from './core.ts'
 import {component} from './core.ts'
 
@@ -19,7 +19,7 @@ export const deriveChunks = <T>({
   const chunks: Chunks<T> = writable<IWritable<T[]>[]>([])
 
   store.subscribe(items => {
-    const chunksCopy = [...chunks.get()]
+    const chunksCopy = [...get(chunks)]
 
     let shouldUpdateChunks = false
     for (let itemIndex = 0; itemIndex < items.length; itemIndex += chunkSize) {
@@ -35,7 +35,7 @@ export const deriveChunks = <T>({
 
       // If some item within this chunk has changed, invalidate just this chunk
       for (let i = 0; i < chunkSize; i += 1) {
-        if (getKey(items[itemIndex + i]) !== getKey(chunk.get()[i])) {
+        if (getKey(items[itemIndex + i]) !== getKey(get(chunk)[i])) {
           chunk.set(items.slice(itemIndex, itemIndex + chunkSize))
           break
         }
@@ -56,9 +56,8 @@ export type ChunkedListProps<T = any> = {
 }
 
 export const ChunkedList = component<ChunkedListProps>({
-  watch: ({chunks}) => [chunks],
-  render({chunks, component}) {
-    return chunks.get().map(chunk => ChunkedListChunk({chunk, component}))
+  getNugs({chunks, component}) {
+    return chunks.map(chunk => ChunkedListChunk({chunk, component}))
   }
 })
 
@@ -68,8 +67,7 @@ export type ChunkedListChunkProps<T = any> = {
 }
 
 export const ChunkedListChunk = component<ChunkedListChunkProps>({
-  watch: ({chunk}) => [chunk],
-  render({chunk, component}) {
-    return chunk.get().map(item => component({item}))
+  getNugs({chunk, component}) {
+    return chunk.map(item => component({item}))
   }
 })

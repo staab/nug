@@ -7,10 +7,9 @@ This is alpha software, don't use it unless you're willing to read the code (the
 # Todo
 
 - [ ] Remove get
-- [ ] Remove subscribe options, use a utility to skip the first run
-- [ ] Convert props/watch into arguments to render? Maybe not
 - [ ] Change to class components for debugging
 - [ ] Fix reactivity when removing items from chunkedlists
+- [ ] Chunks store has a memory leak (unsubscriber)
 
 # Example
 

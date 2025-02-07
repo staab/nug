@@ -1,4 +1,4 @@
-import type {IReadable, Unsubscriber} from './store.ts'
+import type {Unsubscriber, UnwrapStore} from './store.ts'
 
 export type Reference = Element | Comment
 
@@ -82,32 +82,36 @@ export class NugUnsafe implements Nug {
   destroy() {}
 }
 
-export type ComponentOptions<P extends ComponentProps> = {
-  render: (props: P) => Nug[]
-  watch?: (props: P) => IReadable<any>[]
-}
-
 export type ComponentProps = Record<string, any>
 
-export type ComponentFactory<P extends ComponentProps> = (props: P) => NugComponent<P>
+export type UnwrapStoreProps<FullProps> = {
+  [K in keyof FullProps]: UnwrapStore<FullProps[K]>
+}
 
-export class NugComponent<P extends ComponentProps> implements Nug {
+export type ComponentOptions<InputProps extends ComponentProps, FullProps extends InputProps = InputProps> = {
+  getNugs: (props: UnwrapStoreProps<FullProps>) => Nug[]
+  addProps?: (props: InputProps) => FullProps
+}
+
+export type ComponentFactory<InputProps extends ComponentProps, FullProps extends InputProps = InputProps> = (props: InputProps) => NugComponent<InputProps, FullProps>
+
+export class NugComponent<InputProps extends ComponentProps, FullProps extends InputProps = InputProps> implements Nug {
   protected subs: Unsubscriber[] = []
   protected placeholder = document.createComment("nug placeholder")
   protected container: Element | undefined
   protected elements: Element[] = []
   protected children: Nug[] = []
 
-  constructor(private options: ComponentOptions<P>, private props: P) {}
+  constructor(private options: ComponentOptions<InputProps, FullProps>, private props: InputProps) {}
 
-  static define<P extends ComponentProps>(options: ComponentOptions<P>) {
-    return (props: P) => new NugComponent(options, props)
+  static define<InputProps extends ComponentProps, FullProps extends InputProps = InputProps>(options: ComponentOptions<InputProps, FullProps>) {
+    return (props: InputProps) => new NugComponent(options, props)
   }
 
-  private update = () => {
+  private update = (data: FullProps) => {
     this.children.splice(0).forEach(child => child.destroy())
 
-    for (const child of this.options.render(this.props)) {
+    for (const child of this.options.getNugs(data)) {
       this.children.push(child)
 
       child.render(this.container!, this.placeholder)
@@ -115,6 +119,10 @@ export class NugComponent<P extends ComponentProps> implements Nug {
   }
 
   render(element: Element, reference?: Reference) {
+    let initialized = false
+    const data: any = {}
+    const props = this.options.addProps?.(this.props) || this.props
+
     this.container = element
     this.container.appendChild(this.placeholder)
 
@@ -124,19 +132,24 @@ export class NugComponent<P extends ComponentProps> implements Nug {
       this.container.appendChild(this.placeholder)
     }
 
-    for (const v of Object.values(this.props)) {
-      if (v.subscribe) {
-        this.subs.push(v.subscribe(this.update, {initial: false}))
+    for (const [k, prop] of Object.entries(props)) {
+      if (prop.subscribe) {
+        this.subs.push(
+          prop.subscribe((value: any) => {
+            data[k] = value
+
+            if (initialized) {
+              this.update(data as FullProps)
+            }
+          })
+        )
+      } else {
+        data[k] = prop
       }
     }
 
-    if (this.options.watch) {
-      for (const v of this.options.watch(this.props)) {
-        this.subs.push(v.subscribe(this.update, {initial: false}))
-      }
-    }
-
-    this.update()
+    initialized = true
+    this.update(data)
   }
 
   destroy() {
@@ -164,5 +177,8 @@ export const text = (t: any) => new NugText(t.toString())
 
 export const unsafe = (t: any) => new NugUnsafe(t.toString())
 
-export const component = <P extends ComponentProps>(options: ComponentOptions<P>) =>
+export const component = <
+  InputProps extends ComponentProps,
+  FullProps extends InputProps = InputProps
+>(options: ComponentOptions<InputProps, FullProps>) =>
   NugComponent.define(options)

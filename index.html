@@ -11,7 +11,7 @@
     <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.23/dist/full.min.css" rel="stylesheet" type="text/css" />
     <script src="https://cdn.tailwindcss.com"></script>
     <script type="module">
-      import {div, button, span, text, writable, derived, deriveChunks, component, ChunkedList} from '/src/index.ts'
+      import {div, button, span, anchor, text, writable, derived, deriveChunks, component, ChunkedList} from '/src/index.ts'
 
       const count = writable(0)
 
@@ -80,8 +80,12 @@
       const Application = component({
         render() {
           return [
-            div({class: 'bg-base-300 h-screen inset-0 flex justify-center items-center'})
-              .append(Counter({buttonText: "Click me!"})),
+            div({class: 'bg-base-300 h-screen inset-0 flex justify-center items-center flex-col gap-1'})
+              .append(Counter({buttonText: "Click me!"}))
+              .append(
+                anchor({class: "opacity-50 underline", href: "https://github.com/staab/nug"})
+                  .append(text("Powered by nug"))
+              ),
           ]
         },
       })

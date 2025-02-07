@@ -158,6 +158,8 @@ export const span = NugElement.define('span')
 
 export const button = NugElement.define('button')
 
+export const anchor = NugElement.define('a')
+
 export const text = (t: any) => new NugText(t.toString())
 
 export const unsafe = (t: any) => new NugUnsafe(t.toString())

@@ -1,7 +1,8 @@
 {
-  "name": "charity",
-  "private": true,
-  "version": "0.0.0",
+  "name": "nug",
+  "version": "0.0.1",
+  "description": "A simple, zero-dependencies reactive dom system",
+  "license": "MIT",
   "type": "module",
   "scripts": {
     "dev": "vite",

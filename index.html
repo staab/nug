@@ -8,6 +8,8 @@
   </head>
   <body>
     <div id="app"></div>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.23/dist/full.min.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
     <script type="module">
       import {div, button, span, text, writable, derived, deriveChunks, component, ChunkedList} from '/src/index.ts'
 
@@ -34,7 +36,8 @@
       const CounterButton = component({
         render({buttonText}) {
           return [
-            button({click: incrementCount}).append(text(buttonText))
+            button({click: incrementCount, class: 'btn btn-primary'})
+              .append(text(buttonText))
           ]
         },
       })
@@ -44,24 +47,32 @@
           return [count]
         },
         render() {
+          const n = count.get()
+          const word = n === 1 ? 'time' : 'times'
+
           return [
-            span({style: 'color: red; padding-left: 12px;'}).append(text(count.get())),
+            span({class: 'text-center inline-block opacity-50'})
+              .append(text(`You have clicked ${n} ${word}`)),
           ]
         },
       })
 
       const CounterItem = component({
         render({item}) {
-          return [div().append(text(item))]
+          return [div().append(text(`Item #${item}`))]
         },
       })
 
       const Counter = component({
         render({buttonText}) {
           return [
-            CounterButton({buttonText}),
-            CounterDisplay({}),
-            ChunkedList({chunks, component: CounterItem}),
+            div({class: 'p-12 rounded-xl bg-base-100 text-base-content flex flex-col gap-2 min-h-96 w-96'})
+              .append(CounterButton({buttonText}))
+              .append(CounterDisplay({}))
+              .append(
+                div({class: 'flex flex-wrap gap-1'})
+                  .append(ChunkedList({chunks, component: CounterItem}))
+              )
           ]
         },
       })
@@ -69,7 +80,8 @@
       const Application = component({
         render() {
           return [
-            Counter({buttonText: "Click me!"}),
+            div({class: 'bg-base-300 h-screen inset-0 flex justify-center items-center'})
+              .append(Counter({buttonText: "Click me!"})),
           ]
         },
       })

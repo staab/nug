@@ -195,8 +195,6 @@ export class Component<P extends ComponentProps = ComponentProps> {
       element.remove()
     }
 
-    console.log('update', this.constructor.name)
-
     this.nugs = ensurePlural(this.render())
     this.elements = render(this.element, this.nugs)
 

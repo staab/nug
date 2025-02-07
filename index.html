@@ -30,11 +30,26 @@
         }
       }
 
+      class CounterItems extends Component {
+        watch = [count]
+
+        render() {
+          const nugs = []
+
+          for (let i = 0; i < count.get(); i++) {
+            nugs.push(div().append(text(i)))
+          }
+
+          return nugs
+        }
+      }
+
       class Counter extends Component {
         render() {
           return [
             component(new CounterButton({buttonText: this.props.buttonText})),
             component(new CounterDisplay({})),
+            component(new CounterItems({})),
           ]
         }
       }

@@ -88,6 +88,14 @@ export type UnwrapStoreProps<Props> = {
   [K in keyof Props]: UnwrapStore<Props[K]>
 }
 
+export type ComponentOptions<Props extends ComponentProps = ComponentProps> = {
+  render: (props: UnwrapStoreProps<Props>) => Nug[]
+  addProps?: (props: Props) => Props
+}
+
+export type ComponentFactory<Props extends ComponentProps = ComponentProps> =
+  (props: Props) => NugComponent<Props>
+
 export class NugComponent<Props extends ComponentProps = ComponentProps> implements Nug {
   protected subs: Unsubscriber[] = []
   protected placeholder = document.createComment("nug placeholder")
@@ -95,29 +103,26 @@ export class NugComponent<Props extends ComponentProps = ComponentProps> impleme
   protected elements: Element[] = []
   protected children: Nug[] = []
 
-  constructor(private props: Props) {}
+  constructor(private options: ComponentOptions<Props>, private props: Props) {}
+
+  static define<Props extends ComponentProps = ComponentProps>(options: ComponentOptions<Props>) {
+    return (props: Props) => new NugComponent(options, props)
+  }
 
   private update = (data: Props) => {
     this.children.splice(0).forEach(child => child.destroy())
 
-    for (const child of this.render(data)) {
+    for (const child of this.options.render(data)) {
       this.children.push(child)
 
       child.mount(this.container!, this.placeholder)
     }
   }
 
-  addProps(props: Props): Props {
-    return props
-  }
-
-  render(props: UnwrapStoreProps<Props>): Nug[] {
-    return []
-  }
-
   mount(element: Element, reference?: Reference) {
     let initialized = false
     const data: any = {}
+    const props = this.options.addProps?.(this.props) || this.props
 
     this.container = element
     this.container.appendChild(this.placeholder)
@@ -128,7 +133,7 @@ export class NugComponent<Props extends ComponentProps = ComponentProps> impleme
       this.container.appendChild(this.placeholder)
     }
 
-    for (const [k, prop] of Object.entries(this.addProps(this.props))) {
+    for (const [k, prop] of Object.entries(props)) {
       if (prop.subscribe) {
         this.subs.push(
           prop.subscribe((value: any) => {
@@ -172,3 +177,7 @@ export const anchor = NugElement.define('a')
 export const text = (t: any) => new NugText(t.toString())
 
 export const unsafe = (t: any) => new NugUnsafe(t.toString())
+
+export const component = <Props extends ComponentProps = ComponentProps>(
+  options: ComponentOptions<Props>
+) => NugComponent.define(options)

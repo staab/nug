@@ -10,9 +10,9 @@
     <div id="app"></div>
     <script type="module" src="/src/main.ts"></script>
     <script type="module">
-      import {div, button, span, text, Store, component} from '/src/main.ts'
+      import {div, button, span, text, writable, component} from '/src/main.ts'
 
-      const count = new Store(0)
+      const count = writable(0)
 
       const incrementCount = () => count.update(c => c + 1)
 

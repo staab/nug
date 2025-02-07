@@ -1,8 +1,13 @@
+// Utils
+
+export const ensurePlural = <T>(x: T | T[]) => (x instanceof Array ? x : [x])
+
 // Nug
 
 export type NugAttrs = Record<string, any>
 
 export class Nug {
+  id = ""
   children: NugChild[] = []
 
   constructor(readonly tag: string, readonly attrs: NugAttrs) {}
@@ -12,7 +17,13 @@ export class Nug {
   }
 
   static render(nugs: Nug[]) {
-    return nugs.map(nug => nug.render())
+    return nugs.flatMap(nug => nug.render())
+  }
+
+  as(id: string) {
+    this.id = id
+
+    return this
   }
 
   append(child: NugChild) {
@@ -21,8 +32,20 @@ export class Nug {
     return this
   }
 
+  getElement() {
+    if (this.id) {
+      const found = document.getElementById(this.id)
+
+      if (found) {
+        return found
+      }
+    }
+
+    return document.createElement(this.tag)
+  }
+
   render() {
-    const element = document.createElement(this.tag)
+    const element = this.getElement()
 
     for (const [k, v] of Object.entries(this.attrs)) {
       if (typeof v === 'function') {
@@ -42,7 +65,9 @@ export class Nug {
       } else if (textContent.length > 0) {
         console.error("Unable to mix text and elements", this.children)
       } else {
-        element.appendChild(rendered)
+        for (const item of ensurePlural(rendered)) {
+          element.appendChild(item)
+        }
       }
     }
 
@@ -67,7 +92,6 @@ export class NugText {
 }
 
 export class NugUnsafe {
-
   constructor(private html: string) {}
 
   render() {
@@ -75,7 +99,15 @@ export class NugUnsafe {
   }
 }
 
-export type NugChild = Nug | NugText | NugUnsafe
+export class NugComponent {
+  constructor(private component: Component) {}
+
+  render() {
+    return Nug.render(ensurePlural(this.component.render()))
+  }
+}
+
+export type NugChild = Nug | NugText | NugUnsafe | NugComponent
 
 export const div = Nug.defineElement('div')
 
@@ -86,6 +118,8 @@ export const button = Nug.defineElement('button')
 export const text = (t: any) => new NugText(t.toString())
 
 export const unsafe = (t: any) => new NugUnsafe(t.toString())
+
+export const component = (component: Component) => new NugComponent(component)
 
 // Stores
 
@@ -137,7 +171,7 @@ export class Store<T> {
 
 export type ComponentProps = Record<string, any>
 
-export class Component<P extends ComponentProps> {
+export class Component<P extends ComponentProps = ComponentProps> {
   protected element: Element | undefined
   protected subs: Unsubscriber[] = []
 
@@ -166,11 +200,7 @@ export class Component<P extends ComponentProps> {
       throw new Error(`${this.constructor.name} updated before it was mounted`)
     }
 
-    let nugs = this.render()
-
-    if (!Array.isArray(nugs)) {
-      nugs = [nugs]
-    }
+    const nugs = ensurePlural(this.render())
 
     this.element.innerHTML = ''
 
@@ -179,7 +209,7 @@ export class Component<P extends ComponentProps> {
     }
   }
 
-  render(): Nug | Nug[] {
+  render(): Nug[] {
     return []
   }
 }

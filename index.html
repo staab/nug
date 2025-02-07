@@ -10,7 +10,7 @@
     <div id="app"></div>
     <script type="module" src="/src/main.ts"></script>
     <script type="module">
-      import {Component, div, button, span, text, Store, mount} from '/src/main.ts'
+      import {Component, div, button, span, text, Store, mount, component} from '/src/main.ts'
 
       const count = new Store(0)
 
@@ -21,13 +21,19 @@
 
         render() {
           return div()
-            .append(button({onclick: this.onClick}).append(text(this.props.buttonText)))
+            .append(button({onclick: this.onClick}).append(text(this.props.buttonText)).as('button'))
             .append(span({style: 'color: red; padding-left: 12px;'}).append(text(count.get())))
         }
       }
 
+      class Application extends Component {
+        render() {
+          return component(new Counter({buttonText: "Click me!"}))
+        }
+      }
+
       const app = document.querySelector('#app')
-      const root = new Counter({buttonText: "Click me!"})
+      const root = new Application({})
       const state = {count}
 
       mount(app, root, state)
